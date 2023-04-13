@@ -15,6 +15,8 @@ class DocumentMetadata(BaseModel):
     url: Optional[str] = None
     created_at: Optional[str] = None
     author: Optional[str] = None
+    tenant_id: Optional[str] = None
+    app_id: Optional[str] = None
 
 
 class DocumentChunkMetadata(DocumentMetadata):
@@ -49,6 +51,8 @@ class DocumentMetadataFilter(BaseModel):
     author: Optional[str] = None
     start_date: Optional[str] = None  # any date string format
     end_date: Optional[str] = None  # any date string format
+    tenant_id: Optional[str] = None
+    app_id: Optional[str] = None
 
 
 class Query(BaseModel):
