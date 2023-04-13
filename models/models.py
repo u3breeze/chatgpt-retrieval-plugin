@@ -17,6 +17,7 @@ class DocumentMetadata(BaseModel):
     author: Optional[str] = None
     tenant_id: Optional[str] = None
     app_id: Optional[str] = None
+    source_name: Optional[Source] = None
 
 
 class DocumentChunkMetadata(DocumentMetadata):
