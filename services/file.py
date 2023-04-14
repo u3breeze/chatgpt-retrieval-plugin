@@ -12,12 +12,11 @@ from models.models import Document, DocumentMetadata
 
 
 async def get_document_from_file(
-    file: UploadFile, metadata: DocumentMetadata
+    id: str, file: UploadFile, metadata: DocumentMetadata
 ) -> Document:
     extracted_text = await extract_text_from_form_file(file)
 
-    doc = Document(text=extracted_text, metadata=metadata)
-
+    doc = Document(id=id, text=extracted_text, metadata=metadata)
     return doc
 
 
