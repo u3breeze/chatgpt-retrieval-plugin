@@ -3,7 +3,7 @@ import os
 import asyncio
 import concurrent.futures
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 from pymilvus import (
     Collection,
     connections,
