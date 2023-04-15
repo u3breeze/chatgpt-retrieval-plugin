@@ -2,6 +2,7 @@ import json
 import os
 import asyncio
 import concurrent.futures
+import functools
 
 from typing import Dict, List, Optional, Callable
 from pymilvus import (
@@ -300,7 +301,7 @@ class MilvusDataStore(DataStore):
 
     async def run_in_threadpool(func: Callable, *args, **kwargs):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, func, *args, **kwargs)
+        return await loop.run_in_executor(None, functools.partial(func, *args, **kwargs))
 
     async def _upsert(self, chunks: Dict[str, List[DocumentChunk]]) -> List[str]:
         """Upsert chunks into the datastore.
