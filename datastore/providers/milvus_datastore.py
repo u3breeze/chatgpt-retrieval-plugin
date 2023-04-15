@@ -1,6 +1,7 @@
 import json
 import os
 import asyncio
+import concurrent.futures
 
 from typing import Dict, List, Optional
 from pymilvus import (
@@ -335,17 +336,39 @@ class MilvusDataStore(DataStore):
                 for i in range(0, len(insert_data), UPSERT_BATCH_SIZE)
             ]
 
-            # Attempt to insert each batch into our collection
-            # batch data can work with both V1 and V2 schema
-            for batch in batches:
-                if len(batch[0]) != 0:
-                    try:
-                        self._print_info(f"Upserting batch of size {len(batch[0])}")
-                        self.col.insert(batch)
-                        self._print_info(f"Upserted batch successfully")
-                    except Exception as e:
-                        self._print_err(f"Failed to insert batch records, error: {e}")
-                        raise e
+
+
+            async def insert_data(self, batches):
+                loop = asyncio.get_running_loop()
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    for batch in batches:
+                        if len(batch[0]) != 0:
+                            try:
+                                self._print_info(f"Upserting batch of size {len(batch[0])}")
+
+                                # 使用线程池执行插入操作
+                                await loop.run_in_executor(pool, self.col.insert, batch)
+
+                                self._print_info(f"Upserted batch successfully")
+                            except Exception as e:
+                                self._print_err(f"Failed to insert batch records, error: {e}")
+                                raise e
+
+
+            await insert_data(batches)
+
+            # # Attempt to insert each batch into our collection
+            # # batch data can work with both V1 and V2 schema
+            # for batch in batches:
+            #     if len(batch[0]) != 0:
+            #         try:
+            #             self._print_info(f"Upserting batch of size {len(batch[0])}")
+            #             self.col.insert(batch)
+            #             self._print_info(f"Upserted batch successfully")
+            #         except Exception as e:
+            #             self._print_err(f"Failed to insert batch records, error: {e}")
+            #             raise e
 
             # This setting perfoms flushes after insert. Small insert == bad to use
             # self.col.flush()
