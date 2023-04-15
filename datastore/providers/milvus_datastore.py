@@ -370,10 +370,11 @@ class MilvusDataStore(DataStore):
                         mutation_result = mutation_future.result(timeout=None)
 
                         # 检查插入结果
-                        if mutation_result.status.code == 0:
-                            self._print_info("Data batch successfully.")
+                        # 检查插入结果
+                        if mutation_result.ok():
+                            self._print_err("Data inserted successfully.")
                         else:
-                            self._print_info(f"Failed to insert data, error: {mutation_result.status.reason}")
+                            self._print_err(f"Failed to insert data, error: {mutation_result.error_message}")
 
                         # self._print_info(f"Upserted batch successfully")
                     except Exception as e:
