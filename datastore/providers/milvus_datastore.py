@@ -94,6 +94,27 @@ SCHEMA_V1 = [
         FieldSchema(name="author", dtype=DataType.VARCHAR, max_length=65535),
         "",
     ),
+
+    (
+        "tenant_id",
+        FieldSchema(name="tenant_id", dtype=DataType.VARCHAR, max_length=65535),
+        "",
+    ),
+    (
+        "app_id",
+        FieldSchema(name="app_id", dtype=DataType.VARCHAR, max_length=65535),
+        "",
+    ),
+    (
+        "user_id",
+        FieldSchema(name="user_id", dtype=DataType.VARCHAR, max_length=65535),
+        "",
+    ),
+    (
+        "user_name",
+        FieldSchema(name="user_name", dtype=DataType.VARCHAR, max_length=65535),
+        "",
+    ),
 ]
 
 # V2 schema, remomve the "pk" field
