@@ -299,9 +299,9 @@ class MilvusDataStore(DataStore):
         except Exception as e:
             self._print_err("Failed to create index, error: {}".format(e))
 
-    async def run_in_threadpool(func: Callable, *args, **kwargs):
+    async def run_in_threadpool(self, callback, *args, **kwargs):
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, functools.partial(func, *args, **kwargs))
+        return await loop.run_in_executor(None, callback, *args, **kwargs)
 
     async def _upsert(self, chunks: Dict[str, List[DocumentChunk]]) -> List[str]:
         """Upsert chunks into the datastore.
@@ -465,7 +465,17 @@ class MilvusDataStore(DataStore):
                     'output_fields': [field[0] for field in self._get_schema()[return_from:]],
                 }
                 # Use a lambda function to create a callable object
-                res = await self.run_in_threadpool(lambda: self.col.search(**search_kwargs))
+                res = await self.run_in_threadpool(
+                    self.col.search,
+                    data=[query.embedding],
+                    anns_field=EMBEDDING_FIELD,
+                    param=self.search_params,
+                    limit=query.top_k,
+                    expr=filter,
+                    output_fields=[
+                        field[0] for field in self._get_schema()[return_from:]
+                    ],  # Ignoring pk, embedding
+                )
 
                 # Results that will hold our DocumentChunkWithScores
                 results = []
