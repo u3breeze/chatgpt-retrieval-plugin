@@ -356,7 +356,7 @@ class MilvusDataStore(DataStore):
                                 raise e
 
 
-            await insert_data(batches)
+            await insert_data(self, batches)
 
             # # Attempt to insert each batch into our collection
             # # batch data can work with both V1 and V2 schema
