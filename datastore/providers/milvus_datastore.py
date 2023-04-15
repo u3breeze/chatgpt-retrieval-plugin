@@ -298,6 +298,10 @@ class MilvusDataStore(DataStore):
         except Exception as e:
             self._print_err("Failed to create index, error: {}".format(e))
 
+    async def run_in_threadpool(func: Callable, *args, **kwargs):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, func, *args, **kwargs)
+
     async def _upsert(self, chunks: Dict[str, List[DocumentChunk]]) -> List[str]:
         """Upsert chunks into the datastore.
 
@@ -338,38 +342,37 @@ class MilvusDataStore(DataStore):
 
 
 
-            # async def insert_data(self, batches):
-            #     loop = asyncio.get_running_loop()
-            #
-            #     with concurrent.futures.ThreadPoolExecutor() as pool:
-            #         for batch in batches:
-            #             if len(batch[0]) != 0:
-            #                 try:
-            #                     self._print_info(f"Upserting batch of size {len(batch[0])}")
-            #
-            #                     # 使用线程池执行插入操作
-            #                     await loop.run_in_executor(pool, self.col.insert, batch)
-            #
-            #                     self._print_info(f"Upserted batch successfully")
-            #                 except Exception as e:
-            #                     self._print_err(f"Failed to insert batch records, error: {e}")
-            #                     raise e
-            #
-            #
-            # await insert_data(self, batches)
+            async def insert_data(self, batches):
+                loop = asyncio.get_running_loop()
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    for batch in batches:
+                        if len(batch[0]) != 0:
+                            try:
+                                self._print_info(f"Upserting batch of size {len(batch[0])}")
+
+                                # 使用线程池执行插入操作
+                                await loop.run_in_executor(pool, self.col.insert, batch)
+
+                                self._print_info(f"Upserted batch successfully")
+                            except Exception as e:
+                                self._print_err(f"Failed to insert batch records, error: {e}")
+                                raise e
+
+
+            await insert_data(self, batches)
 
             # Attempt to insert each batch into our collection
             # batch data can work with both V1 and V2 schema
-            for batch in batches:
-                if len(batch[0]) != 0:
-                    try:
-                        self._print_info(f"Upserting batch of size {len(batch[0])}")
-                        mutation_future = self.col.insert(data=batch, _async=True)
-                        mutation_future.result(timeout=None)
-                        self._print_info(f"Upserted batch successfully")
-                    except Exception as e:
-                        self._print_err(f"Failed to insert batch records, error: {e}")
-                        raise e
+            # for batch in batches:
+            #     if len(batch[0]) != 0:
+            #         try:
+            #             self._print_info(f"Upserting batch of size {len(batch[0])}")
+            #             self.col.insert(batch)
+            #             self._print_info(f"Upserted batch successfully")
+            #         except Exception as e:
+            #             self._print_err(f"Failed to insert batch records, error: {e}")
+            #             raise e
 
             # This setting perfoms flushes after insert. Small insert == bad to use
             # self.col.flush()
@@ -441,7 +444,19 @@ class MilvusDataStore(DataStore):
 
                 # Perform our search
                 return_from = 2 if self._schema_ver == "V1" else 1
-                async_res_future = self.col.search(
+                # res = self.col.search(
+                #     data=[query.embedding],
+                #     anns_field=EMBEDDING_FIELD,
+                #     param=self.search_params,
+                #     limit=query.top_k,
+                #     expr=filter,
+                #     output_fields=[
+                #         field[0] for field in self._get_schema()[return_from:]
+                #     ],  # Ignoring pk, embedding
+                # )
+
+                res = await self.run_in_threadpool(
+                    self.col.search,
                     data=[query.embedding],
                     anns_field=EMBEDDING_FIELD,
                     param=self.search_params,
@@ -450,9 +465,7 @@ class MilvusDataStore(DataStore):
                     output_fields=[
                         field[0] for field in self._get_schema()[return_from:]
                     ],  # Ignoring pk, embedding
-                    _async=True,
                 )
-                res = async_res_future.result(timeout=5)
 
                 # Results that will hold our DocumentChunkWithScores
                 results = []
@@ -530,7 +543,11 @@ class MilvusDataStore(DataStore):
                 # Add quotation marks around the string format id
                 ids = ['"' + str(id) + '"' for id in ids]
                 # Query for the pk's of entries that match id's
-                ids = self.col.query(f"document_id in [{','.join(ids)}]")
+                # ids = self.col.query(f"document_id in [{','.join(ids)}]")
+                ids = await self.run_in_threadpool(
+                    self.col.query,
+                    expr=f"document_id in [{','.join(ids)}]",
+                )
                 # Convert to list of pks
                 pks = [str(entry[pk_name]) for entry in ids]  # type: ignore
                 # for schema V2, the "id" is varchar, rewrite the expression
@@ -543,7 +560,11 @@ class MilvusDataStore(DataStore):
                     batch_pks = pks[:batch_size]
                     pks = pks[batch_size:]
                     # Delete the entries batch by batch
-                    res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")
+                    # res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")
+                    res = await self.run_in_threadpool(
+                        self.col.delete,
+                        expr=f"{pk_name} in [{','.join(batch_pks)}]"
+                    )
                     # Increment our deleted count
                     delete_count += int(res.delete_count)  # type: ignore
         except Exception as e:
@@ -557,7 +578,11 @@ class MilvusDataStore(DataStore):
                 # Check if there is anything to filter
                 if len(filter) != 0:  # type: ignore
                     # Query for the pk's of entries that match filter
-                    res = self.col.query(filter)  # type: ignore
+                    # res = self.col.query(filter)  # type: ignore
+                    res = await self.run_in_threadpool(
+                        self.col.query,
+                        expr=filter,
+                    )
                     # Convert to list of pks
                     pks = [str(entry[pk_name]) for entry in res]  # type: ignore
                     # for schema V2, the "id" is varchar, rewrite the expression
@@ -568,7 +593,11 @@ class MilvusDataStore(DataStore):
                         batch_pks = pks[:batch_size]
                         pks = pks[batch_size:]
                         # Delete the entries batch by batch
-                        res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")  # type: ignore
+                        # res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")  # type: ignore
+                        res = await self.run_in_threadpool(
+                            self.col.delete,
+                            expr=f"{pk_name} in [{','.join(batch_pks)}]"
+                        )
                         # Increment our delete count
                         delete_count += int(res.delete_count)  # type: ignore
         except Exception as e:
