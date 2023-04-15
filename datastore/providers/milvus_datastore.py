@@ -364,7 +364,7 @@ class MilvusDataStore(DataStore):
                 if len(batch[0]) != 0:
                     try:
                         self._print_info(f"Upserting batch of size {len(batch[0])}")
-                        self.col.insert(data=batch, _async=True)
+                        mutation_future = self.col.insert(data=batch, _async=True)
                         self._print_info(f"Upserted batch successfully")
                     except Exception as e:
                         self._print_err(f"Failed to insert batch records, error: {e}")
