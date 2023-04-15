@@ -464,7 +464,8 @@ class MilvusDataStore(DataStore):
                     'expr': filter,
                     'output_fields': [field[0] for field in self._get_schema()[return_from:]],
                 }
-                res = await self.run_in_threadpool(self.col.search, **search_kwargs)
+                partial_search = functools.partial(self.col.search, **search_kwargs)
+                res = await self.run_in_threadpool(partial_search)
 
                 # Results that will hold our DocumentChunkWithScores
                 results = []
