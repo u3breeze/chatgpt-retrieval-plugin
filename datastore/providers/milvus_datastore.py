@@ -455,17 +455,15 @@ class MilvusDataStore(DataStore):
                 #     ],  # Ignoring pk, embedding
                 # )
 
-                res = await self.run_in_threadpool(
-                    self.col.search,
-                    data=[query.embedding],
-                    anns_field=EMBEDDING_FIELD,
-                    param=self.search_params,
-                    limit=query.top_k,
-                    expr=filter,
-                    output_fields=[
-                        field[0] for field in self._get_schema()[return_from:]
-                    ],  # Ignoring pk, embedding
-                )
+                search_kwargs = {
+                    'data': [query.embedding],
+                    'anns_field': EMBEDDING_FIELD,
+                    'param': self.search_params,
+                    'limit': query.top_k,
+                    'expr': filter,
+                    'output_fields': [field[0] for field in self._get_schema()[return_from:]],
+                }
+                res = await self.run_in_threadpool(self.col.search, **search_kwargs)
 
                 # Results that will hold our DocumentChunkWithScores
                 results = []
@@ -544,10 +542,10 @@ class MilvusDataStore(DataStore):
                 ids = ['"' + str(id) + '"' for id in ids]
                 # Query for the pk's of entries that match id's
                 # ids = self.col.query(f"document_id in [{','.join(ids)}]")
-                ids = await self.run_in_threadpool(
-                    self.col.query,
-                    expr=f"document_id in [{','.join(ids)}]",
-                )
+                query_kwargs = {
+                    'expr': f"document_id in [{','.join(ids)}]",
+                }
+                ids = await self.run_in_threadpool(self.col.query, **query_kwargs)
                 # Convert to list of pks
                 pks = [str(entry[pk_name]) for entry in ids]  # type: ignore
                 # for schema V2, the "id" is varchar, rewrite the expression
@@ -561,10 +559,12 @@ class MilvusDataStore(DataStore):
                     pks = pks[batch_size:]
                     # Delete the entries batch by batch
                     # res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")
-                    res = await self.run_in_threadpool(
-                        self.col.delete,
-                        expr=f"{pk_name} in [{','.join(batch_pks)}]"
-                    )
+                    delete_kwargs = {
+                        'expr': f"{pk_name} in [{','.join(batch_pks)}]"
+                    }
+                    res = await self.run_in_threadpool(self.col.delete, **delete_kwargs)
+
+
                     # Increment our deleted count
                     delete_count += int(res.delete_count)  # type: ignore
         except Exception as e:
@@ -579,10 +579,10 @@ class MilvusDataStore(DataStore):
                 if len(filter) != 0:  # type: ignore
                     # Query for the pk's of entries that match filter
                     # res = self.col.query(filter)  # type: ignore
-                    res = await self.run_in_threadpool(
-                        self.col.query,
-                        expr=filter,
-                    )
+                    query_kwargs = {
+                        'expr': filter,
+                    }
+                    res = await self.run_in_threadpool(self.col.query, **query_kwargs)
                     # Convert to list of pks
                     pks = [str(entry[pk_name]) for entry in res]  # type: ignore
                     # for schema V2, the "id" is varchar, rewrite the expression
@@ -594,10 +594,10 @@ class MilvusDataStore(DataStore):
                         pks = pks[batch_size:]
                         # Delete the entries batch by batch
                         # res = self.col.delete(f"{pk_name} in [{','.join(batch_pks)}]")  # type: ignore
-                        res = await self.run_in_threadpool(
-                            self.col.delete,
-                            expr=f"{pk_name} in [{','.join(batch_pks)}]"
-                        )
+                        delete_kwargs = {
+                            'expr': f"{pk_name} in [{','.join(batch_pks)}]"
+                        }
+                        res = await self.run_in_threadpool(self.col.delete, **delete_kwargs)
                         # Increment our delete count
                         delete_count += int(res.delete_count)  # type: ignore
         except Exception as e:
