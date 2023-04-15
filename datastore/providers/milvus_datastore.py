@@ -370,7 +370,6 @@ class MilvusDataStore(DataStore):
                         mutation_result = mutation_future.result(timeout=None)
 
                         # 检查插入结果
-                        # 检查插入结果
                         if mutation_result.ok():
                             self._print_err("Data inserted successfully.")
                         else:
