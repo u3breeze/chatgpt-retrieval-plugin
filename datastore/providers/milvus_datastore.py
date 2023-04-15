@@ -338,37 +338,37 @@ class MilvusDataStore(DataStore):
 
 
 
-            async def insert_data(self, batches):
-                loop = asyncio.get_running_loop()
+            # async def insert_data(self, batches):
+            #     loop = asyncio.get_running_loop()
+            #
+            #     with concurrent.futures.ThreadPoolExecutor() as pool:
+            #         for batch in batches:
+            #             if len(batch[0]) != 0:
+            #                 try:
+            #                     self._print_info(f"Upserting batch of size {len(batch[0])}")
+            #
+            #                     # 使用线程池执行插入操作
+            #                     await loop.run_in_executor(pool, self.col.insert, batch)
+            #
+            #                     self._print_info(f"Upserted batch successfully")
+            #                 except Exception as e:
+            #                     self._print_err(f"Failed to insert batch records, error: {e}")
+            #                     raise e
+            #
+            #
+            # await insert_data(self, batches)
 
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    for batch in batches:
-                        if len(batch[0]) != 0:
-                            try:
-                                self._print_info(f"Upserting batch of size {len(batch[0])}")
-
-                                # 使用线程池执行插入操作
-                                await loop.run_in_executor(pool, self.col.insert, batch)
-
-                                self._print_info(f"Upserted batch successfully")
-                            except Exception as e:
-                                self._print_err(f"Failed to insert batch records, error: {e}")
-                                raise e
-
-
-            await insert_data(self, batches)
-
-            # # Attempt to insert each batch into our collection
-            # # batch data can work with both V1 and V2 schema
-            # for batch in batches:
-            #     if len(batch[0]) != 0:
-            #         try:
-            #             self._print_info(f"Upserting batch of size {len(batch[0])}")
-            #             self.col.insert(batch)
-            #             self._print_info(f"Upserted batch successfully")
-            #         except Exception as e:
-            #             self._print_err(f"Failed to insert batch records, error: {e}")
-            #             raise e
+            # Attempt to insert each batch into our collection
+            # batch data can work with both V1 and V2 schema
+            for batch in batches:
+                if len(batch[0]) != 0:
+                    try:
+                        self._print_info(f"Upserting batch of size {len(batch[0])}")
+                        self.col.insert(batch, _async=True)
+                        self._print_info(f"Upserted batch successfully")
+                    except Exception as e:
+                        self._print_err(f"Failed to insert batch records, error: {e}")
+                        raise e
 
             # This setting perfoms flushes after insert. Small insert == bad to use
             # self.col.flush()
@@ -440,7 +440,7 @@ class MilvusDataStore(DataStore):
 
                 # Perform our search
                 return_from = 2 if self._schema_ver == "V1" else 1
-                res = self.col.search(
+                async_res_future = self.col.search(
                     data=[query.embedding],
                     anns_field=EMBEDDING_FIELD,
                     param=self.search_params,
@@ -449,7 +449,10 @@ class MilvusDataStore(DataStore):
                     output_fields=[
                         field[0] for field in self._get_schema()[return_from:]
                     ],  # Ignoring pk, embedding
+                    _async=True,
                 )
+                res = await async_res_future
+
                 # Results that will hold our DocumentChunkWithScores
                 results = []
                 # Parse every result for our search
