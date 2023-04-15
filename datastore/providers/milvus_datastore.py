@@ -364,7 +364,7 @@ class MilvusDataStore(DataStore):
                 if len(batch[0]) != 0:
                     try:
                         self._print_info(f"Upserting batch of size {len(batch[0])}")
-                        self.col.insert(batch, _async=True)
+                        self.col.insert(data=batch, _async=True)
                         self._print_info(f"Upserted batch successfully")
                     except Exception as e:
                         self._print_err(f"Failed to insert batch records, error: {e}")
@@ -451,7 +451,7 @@ class MilvusDataStore(DataStore):
                     ],  # Ignoring pk, embedding
                     _async=True,
                 )
-                res = await async_res_future
+                res = async_res_future.result(timeout=5)
 
                 # Results that will hold our DocumentChunkWithScores
                 results = []
