@@ -103,6 +103,11 @@ SCHEMA_V1 = [
         "",
     ),
     (
+        "group_id",
+        FieldSchema(name="group_id", dtype=DataType.VARCHAR, max_length=65535),
+        "",
+    ),
+    (
         "app_id",
         FieldSchema(name="app_id", dtype=DataType.VARCHAR, max_length=65535),
         "",
