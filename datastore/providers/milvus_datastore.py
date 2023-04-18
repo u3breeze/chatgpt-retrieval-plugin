@@ -98,8 +98,8 @@ SCHEMA_V1 = [
     ),
 
     (
-        "tenant_id",
-        FieldSchema(name="tenant_id", dtype=DataType.VARCHAR, max_length=65535),
+        "knowledge_base_id",
+        FieldSchema(name="knowledge_base_id", dtype=DataType.VARCHAR, max_length=65535),
         "",
     ),
     (
