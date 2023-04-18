@@ -49,7 +49,7 @@ app.mount("/sub", sub_app)
 )
 async def upsert_file(
     file: UploadFile = File(...),
-    id: Optional[str] = Form(None),
+    document_id: Optional[str] = Form(None),
     metadata: Optional[str] = Form(None),
 ):
     try:
@@ -61,7 +61,7 @@ async def upsert_file(
     except:
         metadata_obj = DocumentMetadata(source=Source.file)
 
-    document = await get_document_from_file(id, file, metadata_obj)
+    document = await get_document_from_file(document_id, file, metadata_obj)
 
     try:
         ids = await datastore.upsert([document])
