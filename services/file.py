@@ -14,7 +14,7 @@ from models.models import Document, DocumentMetadata
 async def get_document_from_file(
     document_id: str, file: UploadFile, metadata: DocumentMetadata
 ) -> Document:
-    extracted_text = await extract_text_from_form_file(file)
+    extracted_text = await extract_text_from_form_file(document_id, file)
 
     doc = Document(id=document_id, text=extracted_text, metadata=metadata)
     return doc
@@ -86,7 +86,7 @@ def extract_text_from_file(file: BufferedReader, mimetype: str) -> str:
 
 
 # Extract text from a file based on its mimetype
-async def extract_text_from_form_file(file: UploadFile):
+async def extract_text_from_form_file(document_id :str, file: UploadFile):
     """Return the text content of a file."""
     # get the file body from the upload file object
     mimetype = file.content_type
@@ -96,7 +96,7 @@ async def extract_text_from_form_file(file: UploadFile):
 
     file_stream = await file.read()
 
-    temp_file_path = "/tmp/temp_file"
+    temp_file_path = "/tmp/temp_file_" + document_id
 
     # write the file to a temporary location
     with open(temp_file_path, "wb") as f:
