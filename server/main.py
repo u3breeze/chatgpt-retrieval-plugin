@@ -152,5 +152,5 @@ async def startup():
     datastore = await get_datastore()
 
 
-def start():
-    uvicorn.run("server.main:app", host="0.0.0.0", port=8000, reload=True)
+# def start():
+#     uvicorn.run("server.main:app", host="0.0.0.0", port=8000, reload=True)
